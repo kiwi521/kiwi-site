@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kiwi — 摄影学习笔记与个人主页</title>
+    <meta
+      name="description"
+      content="kiwi 的个人主页，分享摄影学习笔记、审美观察、日常灵感，以及我在小红书、500px / 视觉中国和网易云音乐上的持续更新。"
+    />
+    <meta name="theme-color" content="#050816" />
+    <meta property="og:title" content="kiwi — 摄影学习笔记与个人主页" />
+    <meta
+      property="og:description"
+      content="记录摄影学习中的观察、练习与灵感，也分享我持续更新的小红书、500px / 视觉中国与网易云音乐主页。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="kiwi — 摄影学习笔记与个人主页" />
+    <meta
+      name="twitter:description"
+      content="一个关于摄影学习、审美观察与个人记录的极简主页。"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #050816;
+        --bg-soft: rgba(255, 255, 255, 0.06);
+        --card: rgba(255, 255, 255, 0.08);
+        --line: rgba(255, 255, 255, 0.12);
+        --text: rgba(255, 255, 255, 0.96);
+        --muted: rgba(255, 255, 255, 0.62);
+        --accent: #9cc8ff;
+        --accent-strong: #ffffff;
+        --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+          sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(120, 170, 255, 0.22), transparent 34%),
+          radial-gradient(circle at 80% 20%, rgba(120, 255, 214, 0.1), transparent 24%),
+          linear-gradient(180deg, #09101f 0%, #050816 55%, #04050d 100%);
+        color: var(--text);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 44px 44px;
+        mask-image: radial-gradient(circle at center, black 32%, transparent 88%);
+        pointer-events: none;
+        opacity: 0.28;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .page {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 32px;
+      }
+
+      .shell {
+        width: min(1120px, 100%);
+        margin: 0 auto;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 32px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(24px);
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 56px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand-mark {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #ffffff, #7bb0ff);
+        box-shadow: 0 0 24px rgba(140, 190, 255, 0.75);
+      }
+
+      .status {
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+        gap: 32px;
+        align-items: end;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        margin-bottom: 20px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(56px, 10vw, 116px);
+        line-height: 0.92;
+        letter-spacing: -0.06em;
+      }
+
+      .gradient-text {
+        background: linear-gradient(180deg, #ffffff 8%, #b6d4ff 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .intro {
+        max-width: 680px;
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: clamp(18px, 2vw, 22px);
+        line-height: 1.7;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 32px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 148px;
+        padding: 14px 22px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        font-size: 15px;
+        font-weight: 600;
+        transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+      }
+
+      .button:hover {
+        transform: translateY(-1px);
+      }
+
+      .button-primary {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(194, 220, 255, 0.92));
+        color: #08111f;
+      }
+
+      .button-secondary {
+        border-color: var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+      }
+
+      .panel {
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+        min-height: 100%;
+      }
+
+      .panel-label {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .panel-quote {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.45;
+        letter-spacing: -0.03em;
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 72px;
+      }
+
+      .meta-card {
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .meta-title {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .meta-value {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.5;
+        letter-spacing: -0.03em;
+      }
+
+      .link-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .link-item {
+        color: var(--text);
+        opacity: 0.92;
+        transition: opacity 0.22s ease, transform 0.22s ease;
+      }
+
+      .link-item:hover {
+        opacity: 1;
+        transform: translateX(2px);
+      }
+
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+
+      @media (max-width: 900px) {
+        .hero,
+        .meta {
+          grid-template-columns: 1fr;
+        }
+
+        .shell {
+          padding: 22px;
+          border-radius: 24px;
+        }
+
+        .topbar {
+          margin-bottom: 36px;
+        }
+
+        .footer {
+          flex-direction: column;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .page {
+          padding: 18px;
+        }
+
+        .actions {
+          flex-direction: column;
+        }
+
+        .button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="shell">
+        <header class="topbar">
+          <div class="brand">
+            <span class="brand-mark"></span>
+            <span>kiwi / personal site</span>
+          </div>
+          <div class="status">Open for connection</div>
+        </header>
+
+        <section class="hero">
+          <div>
+            <div class="eyebrow">Creator · Photography Notes · Future-facing</div>
+            <h1>
+              Hi, I’m <span class="gradient-text">kiwi</span>.
+            </h1>
+            <p class="intro">
+              我在这里记录自己学习摄影的过程，分享关于光线、构图、色彩、观察与日常审美的笔记。
+              这既是我的个人主页，也是一个会持续更新的视觉练习档案。
+            </p>
+            <div class="actions">
+              <a
+                class="button button-primary"
+                href="https://www.xiaohongshu.com/user/profile/5c4fa81a0000000010027712?xsec_token=YBuHV1H2q_hFsov_4fylWMCc_NJBsMJyzK-TRfVwRx9fU%3D&xsec_source=app_share&xhsshare=&shareRedId=N0k2RkQ9NUo2NzUyOTgwNjczOTk7PDc7&apptime=1782655112&share_id=46ea4f6245864970bbcaab4f69f3f995&share_channel=copy_link"
+                target="_blank"
+                rel="noreferrer"
+              >
+                关注我的小红书
+              </a>
+              <a class="button button-secondary" href="#about">查看更多链接</a>
+            </div>
+          </div>
+
+          <aside class="panel" id="about">
+            <p class="panel-label">Current Focus</p>
+            <p class="panel-quote">
+              正在把摄影学习中的观察、练习、小结与灵感，慢慢整理成一份可回看、可持续生长的个人视觉档案。
+            </p>
+          </aside>
+        </section>
+
+        <section class="meta">
+          <article class="meta-card">
+            <p class="meta-title">Who I Am</p>
+            <p class="meta-value">
+              kiwi，一个持续学习、持续记录的创作者，也是正在认真练习摄影的人。
+            </p>
+          </article>
+          <article class="meta-card">
+            <p class="meta-title">What I Share</p>
+            <p class="meta-value">
+              我会在这里分享摄影学习笔记、构图与光线观察、拍摄练习、小结，以及日常积累下来的审美灵感。
+            </p>
+          </article>
+          <article class="meta-card">
+            <p class="meta-title">Elsewhere</p>
+            <p class="meta-value">在这些地方继续关注我，看到更多作品、笔记与日常记录。</p>
+            <div class="link-list">
+              <a
+                class="link-item"
+                href="https://www.xiaohongshu.com/user/profile/5c4fa81a0000000010027712?xsec_token=YBuHV1H2q_hFsov_4fylWMCc_NJBsMJyzK-TRfVwRx9fU%3D&xsec_source=app_share&xhsshare=&shareRedId=N0k2RkQ9NUo2NzUyOTgwNjczOTk7PDc7&apptime=1782655112&share_id=46ea4f6245864970bbcaab4f69f3f995&share_channel=copy_link"
+                target="_blank"
+                rel="noreferrer"
+              >
+                小红书 ↗
+              </a>
+              <a
+                class="link-item"
+                href="https://500px.com.cn/kiwiberry"
+                target="_blank"
+                rel="noreferrer"
+              >
+                500px / 视觉中国 ↗
+              </a>
+              <a
+                class="link-item"
+                href="https://music.163.com/#/user/home?id=1501816384"
+                target="_blank"
+                rel="noreferrer"
+              >
+                网易云音乐 ↗
+              </a>
+            </div>
+          </article>
+        </section>
+
+        <footer class="footer">
+          <span>Built as a quiet archive for notes, images, and taste in progress.</span>
+          <div class="footer-links">
+            <a
+              href="https://www.xiaohongshu.com/user/profile/5c4fa81a0000000010027712?xsec_token=YBuHV1H2q_hFsov_4fylWMCc_NJBsMJyzK-TRfVwRx9fU%3D&xsec_source=app_share&xhsshare=&shareRedId=N0k2RkQ9NUo2NzUyOTgwNjczOTk7PDc7&apptime=1782655112&share_id=46ea4f6245864970bbcaab4f69f3f995&share_channel=copy_link"
+              target="_blank"
+              rel="noreferrer"
+            >
+              xiaohongshu ↗
+            </a>
+            <a
+              href="https://500px.com.cn/kiwiberry"
+              target="_blank"
+              rel="noreferrer"
+            >
+              500px ↗
+            </a>
+            <a
+              href="https://music.163.com/#/user/home?id=1501816384"
+              target="_blank"
+              rel="noreferrer"
+            >
+              netease music ↗
+            </a>
+          </div>
+        </footer>
+      </section>
+    </main>
+  </body>
+</html>
