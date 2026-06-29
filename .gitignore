@@ -1,1 +1,3 @@
 .vercel
+assets/generate_icons.py
+assets/generate_og_cover.py
