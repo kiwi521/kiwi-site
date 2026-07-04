@@ -1,3 +1,8 @@
 .vercel
+node_modules/
+dist/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 assets/generate_icons.py
 assets/generate_og_cover.py

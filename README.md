@@ -1,6 +1,6 @@
 # kiwi-site
 
-A minimal personal website for **kiwi** — designed as a quiet, premium space to share photography learning notes, visual observations, and personal links.
+A React + Vite personal website for **kiwi** — redesigned as a more immersive, cinematic homepage while still centering kiwi’s photography learning notes, visual observations, and personal links.
 
 ## Live Site
 
@@ -9,17 +9,24 @@ A minimal personal website for **kiwi** — designed as a quiet, premium space t
 
 ## About
 
-This site is built to help visitors quickly understand:
+This version keeps the original personal-homepage intent, but rebuilds the experience with a stronger hero section, layered imagery, motion, and a more editorial visual rhythm.
+
+The site is designed to quickly communicate:
 
 - who kiwi is
-- what kiwi is currently sharing
-- where to keep following along
+- what kiwi is learning and documenting through photography
+- where to keep following the archive as it expands
 
-The current version focuses on:
+## Visual Direction
 
-- photography learning notes
-- composition, light, color, and visual taste
-- a minimal Apple / Linear-inspired aesthetic
+The redesign blends:
+
+- dark cinematic presentation
+- premium editorial typography
+- layered image storytelling
+- soft motion and atmospheric transitions
+
+The homepage now draws from a prompt-led hero concept while adapting all core content back to kiwi’s own identity and links.
 
 ## Links
 
@@ -29,16 +36,52 @@ The current version focuses on:
 
 ## Stack
 
-- Plain HTML
-- Inline CSS
-- Static assets
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- lucide-react
 - Deployed on Vercel
 
-## Local Preview
+## Local Development
 
-Because this is a simple static site, you can preview it by opening `index.html` directly in a browser.
+Install dependencies:
 
-If you want to serve it locally instead, you can use any static file server.
+```bash
+npm install
+```
+
+Run the dev server:
+
+```bash
+npm run dev
+```
+
+Create a production build:
+
+```bash
+npm run build
+```
+
+## Project Structure
+
+```text
+.
+├─ assets/
+├─ src/
+│  ├─ App.tsx
+│  ├─ index.css
+│  └─ main.tsx
+├─ index.html
+├─ package.json
+├─ postcss.config.js
+├─ tailwind.config.js
+├─ tsconfig.app.json
+├─ tsconfig.json
+├─ tsconfig.node.json
+├─ vercel.json
+└─ vite.config.ts
+```
 
 ## Deployment
 
@@ -53,24 +96,3 @@ git push origin main
 ```
 
 Pushing to `main` should trigger a new Vercel deployment automatically.
-
-## Project Structure
-
-```text
-.
-├─ index.html
-├─ vercel.json
-├─ assets/
-└─ .gitignore
-```
-
-## Design Notes
-
-The site aims to feel:
-
-- minimal
-- calm
-- premium
-- future-facing
-
-Visual direction references Apple-style restraint and Linear-style clarity, while staying personal and lightweight.
