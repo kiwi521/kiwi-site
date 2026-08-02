@@ -7,5 +7,6 @@ vite.config.d.ts
 .env
 .env.*
 !.env.example
+.vs/
 assets/generate_icons.py
 assets/generate_og_cover.py
