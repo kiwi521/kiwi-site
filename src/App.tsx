@@ -13,7 +13,7 @@ const BG_IMAGE_1 =
 const BG_IMAGE_2 =
   'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260609_201152_bba90a12-bf12-459f-91f0-51f237dbaf3b.png&w=1280&q=85'
 const SPOTLIGHT_R = 260
-const NOTES_STORAGE_KEY = 'kiwi-photo-notes'
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 
 const navItems = [
   { label: '首页', href: '#home' },
@@ -33,27 +33,12 @@ const socialLinks = [
 ]
 
 type JournalNote = {
-  id: string
+  id: number
   title: string
   body: string
   image?: string
   createdAt: string
 }
-
-const starterNotes: JournalNote[] = [
-  {
-    id: 'starter-light',
-    title: '先看光，再决定要不要按下快门',
-    body: '最近拍照时，我会先站在原地多看几秒。光从哪里来，影子往哪里落，画面里最安静的地方在哪里，答案通常比参数更早出现。',
-    createdAt: '2026 年 08 月',
-  },
-  {
-    id: 'starter-walk',
-    title: '散步是我最常用的取景方式',
-    body: '不带明确目的地出门，反而更容易遇见一些值得记录的瞬间。街角、窗边、路人经过后的空白，都可能成为今天的画面。',
-    createdAt: '2026 年 07 月',
-  },
-]
 
 type RevealLayerProps = {
   image: string
@@ -90,7 +75,9 @@ function LogoMark() {
   )
 }
 
-function formatNoteDate(date: Date) {
+function formatNoteDate(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
     month: 'long',
@@ -105,33 +92,38 @@ function App() {
   const [cursorPos, setCursorPos] = useState({ x: -999, y: -999 })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [notes, setNotes] = useState<JournalNote[]>([])
-  const [notesReady, setNotesReady] = useState(false)
+  const [notesLoading, setNotesLoading] = useState(true)
+  const [notesError, setNotesError] = useState('')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [image, setImage] = useState('')
   const [imageName, setImageName] = useState('')
   const [formMessage, setFormMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [adminToken, setAdminToken] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    const savedNotes = window.localStorage.getItem(NOTES_STORAGE_KEY)
-    if (!savedNotes) {
-      setNotes(starterNotes)
-      setNotesReady(true)
-      return
+    const loadNotes = async () => {
+      try {
+        const response = await fetch('/api/notes')
+        if (!response.ok) throw new Error('读取笔记失败')
+        const data = (await response.json()) as { notes?: JournalNote[] }
+        setNotes(Array.isArray(data.notes) ? data.notes : [])
+        setNotesError('')
+      } catch {
+        setNotesError('笔记服务暂时不可用，请检查 Vercel 的 MySQL 环境变量。')
+      } finally {
+        setNotesLoading(false)
+      }
     }
 
-    try {
-      setNotes(JSON.parse(savedNotes) as JournalNote[])
-    } catch {
-      setNotes(starterNotes)
-    }
-    setNotesReady(true)
+    void loadNotes()
   }, [])
 
   useEffect(() => {
-    if (notesReady) window.localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes))
-  }, [notes, notesReady])
+    setAdminToken(window.sessionStorage.getItem('kiwi-notes-token') || '')
+  }, [])
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -182,8 +174,8 @@ function App() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (file.size > 6 * 1024 * 1024) {
-      setFormMessage('图片需要小于 6MB，请换一张图片。')
+    if (file.size > MAX_IMAGE_BYTES) {
+      setFormMessage('图片需要小于 2MB，请先压缩后再上传。')
       return
     }
 
@@ -196,34 +188,67 @@ function App() {
     reader.readAsDataURL(file)
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const cleanBody = body.trim()
     if (!cleanBody) {
       setFormMessage('先写下一点文字，再发布这条笔记。')
       return
     }
-
-    const newNote: JournalNote = {
-      id: `${Date.now()}`,
-      title: title.trim() || '没有标题的一页',
-      body: cleanBody,
-      image: image || undefined,
-      createdAt: formatNoteDate(new Date()),
+    if (!adminToken.trim()) {
+      setFormMessage('请输入发布密码，只有你可以写入主页。')
+      return
     }
 
-    setNotes((currentNotes) => [newNote, ...currentNotes])
-    setTitle('')
-    setBody('')
-    setImage('')
-    setImageName('')
-    setFormMessage('已发布，这条笔记现在就在你的档案里。')
-    if (fileInputRef.current) fileInputRef.current.value = ''
-    window.setTimeout(() => document.querySelector('#notes')?.scrollIntoView({ behavior: 'smooth' }), 80)
+    setSubmitting(true)
+    setFormMessage('正在保存笔记……')
+
+    try {
+      const response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Notes-Token': adminToken.trim() },
+        body: JSON.stringify({
+          title: title.trim() || '没有标题的一页',
+          body: cleanBody,
+          image: image || null,
+        }),
+      })
+
+      const data = (await response.json()) as { note?: JournalNote; error?: string }
+      if (!response.ok || !data.note) throw new Error(data.error || '发布失败')
+
+      setNotes((currentNotes) => [data.note as JournalNote, ...currentNotes])
+      setTitle('')
+      setBody('')
+      setImage('')
+      setImageName('')
+      setFormMessage('已发布，这条笔记现在就在你的档案里。')
+      window.sessionStorage.setItem('kiwi-notes-token', adminToken.trim())
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      window.setTimeout(() => document.querySelector('#notes')?.scrollIntoView({ behavior: 'smooth' }), 80)
+    } catch (error) {
+      setFormMessage(error instanceof Error ? error.message : '发布失败，请稍后再试。')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const removeNote = (id: string) => {
-    setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id))
+  const removeNote = async (id: number) => {
+    if (!adminToken.trim()) {
+      setNotesError('请先在发布区域输入管理员密码，再删除笔记。')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/notes?id=${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Notes-Token': adminToken.trim() },
+      })
+      if (!response.ok) throw new Error('删除失败，请稍后再试。')
+      setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id))
+    } catch (error) {
+      setNotesError(error instanceof Error ? error.message : '删除失败，请稍后再试。')
+    }
   }
 
   return (
@@ -358,14 +383,17 @@ function App() {
             </a>
           </div>
 
-          {notes.length > 0 ? (
+          {notesError && <p className="mb-5 rounded-2xl border border-[#e8702a]/30 bg-[#e8702a]/10 px-4 py-3 text-sm text-[#f0b38d]">{notesError}</p>}
+          {notesLoading ? (
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] px-7 py-14 text-center text-white/55">正在读取笔记……</div>
+          ) : notes.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2">
               {notes.map((note) => (
                 <article key={note.id} className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-[0_24px_80px_rgba(0,0,0,0.22)] transition-transform hover:-translate-y-1">
                   {note.image && <img src={note.image} alt="" className="h-56 w-full object-cover opacity-90 transition duration-500 group-hover:scale-[1.02]" />}
                   <div className="p-7 sm:p-8">
                     <div className="mb-4 flex items-center justify-between gap-4 text-xs text-white/40">
-                      <span>{note.createdAt}</span>
+                      <span>{formatNoteDate(note.createdAt)}</span>
                       <button type="button" onClick={() => removeNote(note.id)} className="rounded-full px-2 py-1 text-white/35 transition-colors hover:bg-white/10 hover:text-white" aria-label={`删除笔记：${note.title}`}>
                         删除
                       </button>
@@ -400,14 +428,18 @@ function App() {
                 <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：傍晚的光从窗边经过" className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-[#e8702a]/60" />
               </label>
               <label className="block">
+                <span className="mb-2 block text-sm text-white/75">发布密码</span>
+                <input type="password" value={adminToken} onChange={(event) => setAdminToken(event.target.value)} placeholder="Vercel 环境变量 NOTES_ADMIN_TOKEN" autoComplete="current-password" className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-[#e8702a]/60" />
+              </label>
+              <label className="block">
                 <span className="mb-2 block text-sm text-white/75">正文</span>
                 <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="写下这次拍摄的想法、当时的光线，或者只是你想留下的一句话……" rows={8} className="w-full resize-y rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-sm leading-7 text-white outline-none transition-colors placeholder:text-white/25 focus:border-[#e8702a]/60" />
               </label>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs leading-5 text-white/40">笔记会保存在当前浏览器中，换设备后不会同步。</p>
-                <button type="submit" className={`${heroButtonClass} justify-center`}>
+                <p className="text-xs leading-5 text-white/40">笔记会保存到网站数据库，发布后可在不同设备查看。</p>
+                <button type="submit" disabled={submitting} className={`${heroButtonClass} justify-center disabled:cursor-wait disabled:opacity-60`}>
                   <Send size={16} />
-                  发布笔记
+                  {submitting ? '正在保存' : '发布笔记'}
                 </button>
               </div>
               {formMessage && <p className="text-sm text-[#f0b38d]" role="status">{formMessage}</p>}
@@ -422,7 +454,7 @@ function App() {
                 <span className="relative z-10 flex flex-col items-center gap-3 rounded-2xl bg-black/35 px-5 py-4 backdrop-blur-sm">
                   <ImagePlus className="text-[#f0b38d]" size={25} />
                   <span className="text-sm text-white">{imageName || '选择一张照片'}</span>
-                  <span className="text-xs text-white/45">支持 JPG、PNG，最大 6MB</span>
+                  <span className="text-xs text-white/45">支持 JPG、PNG，最大 2MB</span>
                 </span>
               </button>
               <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} className="sr-only" />

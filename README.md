@@ -41,7 +41,41 @@ The homepage now draws from a prompt-led hero concept while adapting all core co
 - Vite
 - Tailwind CSS
 - lucide-react
+- Vercel Serverless Functions
+- MySQL
 - Deployed on Vercel
+
+## Notes Backend
+
+摄影笔记通过 `api/notes.ts` 读写 MySQL，不再依赖浏览器 localStorage。接口支持：
+
+- `GET /api/notes`：读取最近 50 条笔记
+- `POST /api/notes`：创建笔记，支持标题、正文和一张图片
+- `DELETE /api/notes?id=1`：删除笔记
+
+先在 MySQL 中执行 [`database/schema.sql`](database/schema.sql) 创建数据表。然后在 Vercel 项目设置中配置以下环境变量：
+
+```text
+MYSQL_HOST=你的数据库主机
+MYSQL_PORT=3306
+MYSQL_USER=你的数据库用户名
+MYSQL_PASSWORD=你的数据库密码
+MYSQL_DATABASE=你的数据库名
+MYSQL_SSL=true
+NOTES_ADMIN_TOKEN=发布和删除笔记的管理员密码
+```
+
+也可以使用单条连接串：
+
+```text
+MYSQL_URL=mysql://用户名:密码@主机:3306/数据库名
+```
+
+还需要设置 `NOTES_ADMIN_TOKEN`。页面发布区输入同样的密码后，才能发布或删除笔记；访客只能读取公开笔记。
+
+`MYSQL_URL` 优先级高于分开的连接参数。图片目前以压缩后的 Base64 写入 MySQL，前端限制为 2MB；如果笔记量或图片量增长，建议把图片迁移到对象存储，只在 MySQL 保存图片地址。
+
+本地执行 `npm run dev` 只能预览 Vite 前端，`/api/notes` 需要部署到 Vercel 后才能连接数据库。部署前必须先配置 Vercel 的环境变量，并在目标 MySQL 中执行建表 SQL。
 
 ## Local Development
 

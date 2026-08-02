@@ -4,5 +4,8 @@ dist/
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
+.env
+.env.*
+!.env.example
 assets/generate_icons.py
 assets/generate_og_cover.py
