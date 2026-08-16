@@ -6,6 +6,7 @@ type NoteRow = RowDataPacket & {
   title: string
   body: string
   image: string | null
+  image_thumbnail: string | null
   created_at: Date | string
 }
 
@@ -13,6 +14,7 @@ type NotePayload = {
   title?: unknown
   body?: unknown
   image?: unknown
+  imageThumbnail?: unknown
 }
 
 type AppGlobal = typeof globalThis & {
@@ -67,6 +69,7 @@ function toNote(row: NoteRow) {
     title: row.title,
     body: row.body,
     image: row.image || undefined,
+    imageThumbnail: row.image_thumbnail || undefined,
     createdAt: new Date(row.created_at).toISOString(),
   }
 }
@@ -111,7 +114,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
     if (request.method === 'GET') {
       const [rows] = await pool.query<NoteRow[]>(
-        'SELECT id, title, body, image, created_at FROM photo_notes ORDER BY created_at DESC LIMIT 50',
+        'SELECT id, title, body, image, image_thumbnail, created_at FROM photo_notes ORDER BY created_at DESC LIMIT 50',
       )
       return response.status(200).json({ notes: rows.map(toNote) })
     }
@@ -121,6 +124,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
       const title = typeof payload.title === 'string' ? payload.title.trim() : ''
       const body = typeof payload.body === 'string' ? payload.body.trim() : ''
       const image = typeof payload.image === 'string' && payload.image.length > 0 ? payload.image : null
+      const imageThumbnail = typeof payload.imageThumbnail === 'string' && payload.imageThumbnail.length > 0 ? payload.imageThumbnail : null
 
       if (!body) return sendError(response, 400, '正文不能为空。')
       if (title.length > 160) return sendError(response, 400, '标题不能超过 160 个字符。')
@@ -128,13 +132,16 @@ export default async function handler(request: VercelRequest, response: VercelRe
       if (image && (!image.startsWith('data:image/') || Buffer.byteLength(image, 'utf8') > MAX_IMAGE_DATA_BYTES)) {
         return sendError(response, 400, '图片格式不支持，或图片大小超过限制。')
       }
+      if (imageThumbnail && (!imageThumbnail.startsWith('data:image/') || Buffer.byteLength(imageThumbnail, 'utf8') > MAX_IMAGE_DATA_BYTES)) {
+        return sendError(response, 400, '图片缩略图格式不支持，或大小超过限制。')
+      }
 
       const [result] = await pool.execute<mysql.ResultSetHeader>(
-        'INSERT INTO photo_notes (title, body, image) VALUES (?, ?, ?)',
-        [title || '没有标题的一页', body, image],
+        'INSERT INTO photo_notes (title, body, image, image_thumbnail) VALUES (?, ?, ?, ?)',
+        [title || '没有标题的一页', body, image, imageThumbnail],
       )
       const [rows] = await pool.query<NoteRow[]>(
-        'SELECT id, title, body, image, created_at FROM photo_notes WHERE id = ?',
+        'SELECT id, title, body, image, image_thumbnail, created_at FROM photo_notes WHERE id = ?',
         [result.insertId],
       )
       return response.status(201).json({ note: toNote(rows[0]) })

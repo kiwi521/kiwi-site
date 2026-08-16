@@ -7,6 +7,8 @@ import {
   X,
 } from 'lucide-react'
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { PhotoMasonry } from './components/PhotoMasonry'
+import type { JournalNote } from './types/note'
 
 const BG_IMAGE_1 =
   'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260609_195923_b0ba8ace-1d1d-4f2c-9a28-1ab84b330680.png&w=1280&q=85'
@@ -31,14 +33,6 @@ const socialLinks = [
   { label: '500px / 视觉中国', description: '作品归档', href: 'https://500px.com.cn/kiwiberry' },
   { label: '网易云音乐', description: '拍照时在听的歌', href: 'https://music.163.com/#/user/home?id=1501816384' },
 ]
-
-type JournalNote = {
-  id: number
-  title: string
-  body: string
-  image?: string
-  createdAt: string
-}
 
 type RevealLayerProps = {
   image: string
@@ -75,16 +69,6 @@ function LogoMark() {
   )
 }
 
-function formatNoteDate(value: string | Date) {
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(date)
-}
-
 function App() {
   const mouse = useRef({ x: -999, y: -999 })
   const smooth = useRef({ x: -999, y: -999 })
@@ -97,6 +81,7 @@ function App() {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [image, setImage] = useState('')
+  const [imageThumbnail, setImageThumbnail] = useState('')
   const [imageName, setImageName] = useState('')
   const [formMessage, setFormMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -184,6 +169,20 @@ function App() {
       setImage(String(reader.result))
       setImageName(file.name)
       setFormMessage('图片已添加，可以继续写下这次拍摄。')
+
+      const previewImage = new Image()
+      previewImage.onload = () => {
+        const maxWidth = 960
+        const scale = Math.min(1, maxWidth / previewImage.naturalWidth)
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(previewImage.naturalWidth * scale))
+        canvas.height = Math.max(1, Math.round(previewImage.naturalHeight * scale))
+        const context = canvas.getContext('2d')
+        if (!context) return
+        context.drawImage(previewImage, 0, 0, canvas.width, canvas.height)
+        setImageThumbnail(canvas.toDataURL('image/jpeg', 0.72))
+      }
+      previewImage.src = String(reader.result)
     }
     reader.readAsDataURL(file)
   }
@@ -211,6 +210,7 @@ function App() {
           title: title.trim() || '没有标题的一页',
           body: cleanBody,
           image: image || null,
+          imageThumbnail: imageThumbnail || null,
         }),
       })
 
@@ -221,6 +221,7 @@ function App() {
       setTitle('')
       setBody('')
       setImage('')
+      setImageThumbnail('')
       setImageName('')
       setFormMessage('已发布，这条笔记现在就在你的档案里。')
       window.sessionStorage.setItem('kiwi-notes-token', adminToken.trim())
@@ -383,32 +384,7 @@ function App() {
             </a>
           </div>
 
-          {notesError && <p className="mb-5 rounded-2xl border border-[#e8702a]/30 bg-[#e8702a]/10 px-4 py-3 text-sm text-[#f0b38d]">{notesError}</p>}
-          {notesLoading ? (
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] px-7 py-14 text-center text-white/55">正在读取笔记……</div>
-          ) : notes.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              {notes.map((note) => (
-                <article key={note.id} className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-[0_24px_80px_rgba(0,0,0,0.22)] transition-transform hover:-translate-y-1">
-                  {note.image && <img src={note.image} alt="" className="h-56 w-full object-cover opacity-90 transition duration-500 group-hover:scale-[1.02]" />}
-                  <div className="p-7 sm:p-8">
-                    <div className="mb-4 flex items-center justify-between gap-4 text-xs text-white/40">
-                      <span>{formatNoteDate(note.createdAt)}</span>
-                      <button type="button" onClick={() => removeNote(note.id)} className="rounded-full px-2 py-1 text-white/35 transition-colors hover:bg-white/10 hover:text-white" aria-label={`删除笔记：${note.title}`}>
-                        删除
-                      </button>
-                    </div>
-                    <h3 className="max-w-xl text-2xl font-semibold leading-tight tracking-[-0.04em] text-white">{note.title}</h3>
-                    <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-white/68">{note.body}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-[2rem] border border-dashed border-white/15 bg-white/[0.03] px-7 py-14 text-center text-white/55">
-              还没有笔记，先写下第一段关于这次拍摄的感受吧。
-            </div>
-          )}
+          <PhotoMasonry notes={notes} loading={notesLoading} error={notesError} onDelete={removeNote} />
         </section>
 
         <section id="publish" className="mx-auto mt-20 max-w-6xl scroll-mt-24 rounded-[2.25rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.28)] sm:p-10 lg:p-12">
@@ -458,7 +434,7 @@ function App() {
                 </span>
               </button>
               <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} className="sr-only" />
-              {image && <button type="button" onClick={() => { setImage(''); setImageName(''); if (fileInputRef.current) fileInputRef.current.value = '' }} className="mt-3 text-xs text-white/45 transition-colors hover:text-white">移除图片</button>}
+              {image && <button type="button" onClick={() => { setImage(''); setImageThumbnail(''); setImageName(''); if (fileInputRef.current) fileInputRef.current.value = '' }} className="mt-3 text-xs text-white/45 transition-colors hover:text-white">移除图片</button>}
             </div>
           </form>
         </section>

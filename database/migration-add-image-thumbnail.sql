@@ -1,0 +1,1 @@
+ALTER TABLE photo_notes ADD COLUMN IF NOT EXISTS image_thumbnail MEDIUMTEXT NULL;

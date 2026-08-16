@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS photo_notes (
   title VARCHAR(160) NOT NULL,
   body TEXT NOT NULL,
   image MEDIUMTEXT NULL,
+  image_thumbnail MEDIUMTEXT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   INDEX idx_photo_notes_created_at (created_at)

@@ -49,6 +49,15 @@ a {
   font-family: "Playfair Display", "Songti SC", serif;
 }
 
+.photo-masonry {
+  column-fill: balance;
+}
+
+.photo-masonry-item {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+}
+
 @keyframes heroReveal {
   0% {
     opacity: 0;
