@@ -6,7 +6,7 @@ type PhotoMasonryProps = {
   notes: JournalNote[]
   loading: boolean
   error: string
-  onDelete: (id: number) => void
+  onDelete: (id: number) => Promise<boolean>
 }
 
 function formatNoteDate(value: string) {
@@ -22,6 +22,8 @@ function formatNoteDate(value: string) {
 
 export function PhotoMasonry({ notes, loading, error, onDelete }: PhotoMasonryProps) {
   const [selectedNote, setSelectedNote] = useState<JournalNote | null>(null)
+  const [noteToDelete, setNoteToDelete] = useState<JournalNote | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!selectedNote) return
@@ -37,6 +39,15 @@ export function PhotoMasonry({ notes, loading, error, onDelete }: PhotoMasonryPr
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [selectedNote])
+
+  const confirmDelete = async () => {
+    if (!noteToDelete) return
+
+    setDeleting(true)
+    const deleted = await onDelete(noteToDelete.id)
+    setDeleting(false)
+    if (deleted) setNoteToDelete(null)
+  }
 
   if (loading) {
     return <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] px-7 py-14 text-center text-white/55">正在读取笔记……</div>
@@ -62,7 +73,7 @@ export function PhotoMasonry({ notes, loading, error, onDelete }: PhotoMasonryPr
                 <div className="p-5 sm:p-6">
                   <div className="mb-3 flex items-center justify-between gap-3 text-xs text-white/40">
                     <time dateTime={note.createdAt}>{formatNoteDate(note.createdAt)}</time>
-                    <button type="button" onClick={() => onDelete(note.id)} className="rounded-full px-2 py-1 text-white/35 transition-colors hover:bg-white/10 hover:text-white" aria-label={`删除笔记：${note.title}`}>删除</button>
+                    <button type="button" onClick={() => setNoteToDelete(note)} className="rounded-full px-2 py-1 text-white/35 transition-colors hover:bg-white/10 hover:text-white" aria-label={`删除笔记：${note.title}`}>删除</button>
                   </div>
                   <h3 className="text-xl font-semibold leading-tight tracking-[-0.03em] text-white">{note.title}</h3>
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-white/65">{note.body}</p>
@@ -81,6 +92,20 @@ export function PhotoMasonry({ notes, loading, error, onDelete }: PhotoMasonryPr
             <div className="flex items-center gap-2 text-sm text-white/75">
               <span>{selectedNote.title}</span>
               <ArrowUpRight size={15} className="text-white/45" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {noteToDelete && (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/75 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-note-title">
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#151515] p-6 shadow-2xl">
+            <p className="text-xs tracking-[0.18em] text-[#f0b38d]">删除确认</p>
+            <h3 id="delete-note-title" className="mt-3 text-xl font-semibold text-white">确定删除这条笔记吗？</h3>
+            <p className="mt-3 text-sm leading-6 text-white/60">“{noteToDelete.title}”将从公开页面与数据库中永久删除，无法恢复。</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" disabled={deleting} onClick={() => setNoteToDelete(null)} className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/75 transition-colors hover:bg-white/10 disabled:opacity-50">取消</button>
+              <button type="button" disabled={deleting} onClick={() => void confirmDelete()} className="rounded-full bg-[#d45739] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#c4482d] disabled:cursor-wait disabled:opacity-60">{deleting ? '正在删除' : '确认删除'}</button>
             </div>
           </div>
         </div>

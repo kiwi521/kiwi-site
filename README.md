@@ -73,7 +73,9 @@ MYSQL_URL=mysql://用户名:密码@主机:3306/数据库名
 
 还需要设置 `NOTES_ADMIN_TOKEN`。页面发布区输入同样的密码后，才能发布或删除笔记；访客只能读取公开笔记。
 
-`MYSQL_URL` 优先级高于分开的连接参数。图片目前以压缩后的 Base64 写入 MySQL，前端限制为 2MB；如果笔记量或图片量增长，建议把图片迁移到对象存储，只在 MySQL 保存图片地址。
+`MYSQL_URL` 优先级高于分开的连接参数。上传原文件最大 5MB，支持 JPG、PNG、WebP、HEIC 和 HEIF；HEIC/HEIF 会在浏览器端转换为 JPEG，并生成展示图与缩略图。摄影笔记列表使用缩略图懒加载，点击照片可查看高清展示图。图片目前以压缩后的 Base64 写入 MySQL；如果笔记量或图片量增长，建议把图片迁移到对象存储，只在 MySQL 保存图片地址。
+
+如果数据库表是在图片缩略图功能加入前创建的，请继续执行 [`database/migration-add-image-thumbnail.sql`](database/migration-add-image-thumbnail.sql)，为 `photo_notes` 增加 `image_thumbnail` 字段。
 
 本地执行 `npm run dev` 只能预览 Vite 前端，`/api/notes` 需要部署到 Vercel 后才能连接数据库。部署前必须先配置 Vercel 的环境变量，并在目标 MySQL 中执行建表 SQL。
 
@@ -104,6 +106,11 @@ npm run build
 ├─ assets/
 ├─ src/
 │  ├─ App.tsx
+│  ├─ api/
+│  ├─ components/
+│  ├─ pages/
+│  ├─ types/
+│  └─ utils/
 │  ├─ index.css
 │  └─ main.tsx
 ├─ index.html

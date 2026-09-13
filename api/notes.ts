@@ -22,7 +22,16 @@ type AppGlobal = typeof globalThis & {
 }
 
 const appGlobal = globalThis as AppGlobal
-const MAX_IMAGE_DATA_BYTES = 4_000_000
+const MAX_IMAGE_DATA_BYTES = 2_800_000
+const MAX_TOTAL_IMAGE_DATA_BYTES = 3_200_000
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '5mb',
+    },
+  },
+}
 
 function getPool() {
   if (appGlobal.kiwiMysqlPool) return appGlobal.kiwiMysqlPool
@@ -129,11 +138,17 @@ export default async function handler(request: VercelRequest, response: VercelRe
       if (!body) return sendError(response, 400, '正文不能为空。')
       if (title.length > 160) return sendError(response, 400, '标题不能超过 160 个字符。')
       if (body.length > 10_000) return sendError(response, 400, '正文不能超过 10000 个字符。')
-      if (image && (!image.startsWith('data:image/') || Buffer.byteLength(image, 'utf8') > MAX_IMAGE_DATA_BYTES)) {
+      const imageByteLength = image ? Buffer.byteLength(image, 'utf8') : 0
+      const thumbnailByteLength = imageThumbnail ? Buffer.byteLength(imageThumbnail, 'utf8') : 0
+
+      if (image && (!image.startsWith('data:image/') || imageByteLength > MAX_IMAGE_DATA_BYTES)) {
         return sendError(response, 400, '图片格式不支持，或图片大小超过限制。')
       }
-      if (imageThumbnail && (!imageThumbnail.startsWith('data:image/') || Buffer.byteLength(imageThumbnail, 'utf8') > MAX_IMAGE_DATA_BYTES)) {
+      if (imageThumbnail && (!imageThumbnail.startsWith('data:image/') || thumbnailByteLength > MAX_IMAGE_DATA_BYTES)) {
         return sendError(response, 400, '图片缩略图格式不支持，或大小超过限制。')
+      }
+      if (imageByteLength + thumbnailByteLength > MAX_TOTAL_IMAGE_DATA_BYTES) {
+        return sendError(response, 400, '压缩后的图片仍然过大，请裁剪或降低照片分辨率后再上传。')
       }
 
       const [result] = await pool.execute<mysql.ResultSetHeader>(
