@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import OSS from 'ali-oss'
 import mysql, { type Pool, type RowDataPacket } from 'mysql2/promise'
 
 type NoteRow = RowDataPacket & {
@@ -7,6 +8,8 @@ type NoteRow = RowDataPacket & {
   body: string
   image: string | null
   image_thumbnail: string | null
+  image_key: string | null
+  image_thumbnail_key: string | null
   created_at: Date | string
 }
 
@@ -15,10 +18,13 @@ type NotePayload = {
   body?: unknown
   image?: unknown
   imageThumbnail?: unknown
+  imageKey?: unknown
+  imageThumbnailKey?: unknown
 }
 
 type AppGlobal = typeof globalThis & {
   kiwiMysqlPool?: Pool
+  kiwiOssClient?: OSS
 }
 
 const appGlobal = globalThis as AppGlobal
@@ -72,6 +78,19 @@ function getPool() {
   return appGlobal.kiwiMysqlPool
 }
 
+function getOssClient() {
+  if (appGlobal.kiwiOssClient) return appGlobal.kiwiOssClient
+  if (!process.env.OSS_REGION || !process.env.OSS_ACCESS_KEY_ID || !process.env.OSS_ACCESS_KEY_SECRET || !process.env.OSS_BUCKET) return null
+  appGlobal.kiwiOssClient = new OSS({
+    region: process.env.OSS_REGION,
+    accessKeyId: process.env.OSS_ACCESS_KEY_ID,
+    accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET,
+    bucket: process.env.OSS_BUCKET,
+    secure: true,
+  })
+  return appGlobal.kiwiOssClient
+}
+
 function toNote(row: NoteRow) {
   return {
     id: row.id,
@@ -79,6 +98,8 @@ function toNote(row: NoteRow) {
     body: row.body,
     image: row.image || undefined,
     imageThumbnail: row.image_thumbnail || undefined,
+    imageKey: row.image_key || undefined,
+    imageThumbnailKey: row.image_thumbnail_key || undefined,
     createdAt: new Date(row.created_at).toISOString(),
   }
 }
@@ -123,7 +144,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
     if (request.method === 'GET') {
       const [rows] = await pool.query<NoteRow[]>(
-        'SELECT id, title, body, image, image_thumbnail, created_at FROM photo_notes ORDER BY created_at DESC LIMIT 50',
+        'SELECT id, title, body, image, image_thumbnail, image_key, image_thumbnail_key, created_at FROM photo_notes ORDER BY created_at DESC LIMIT 50',
       )
       return response.status(200).json({ notes: rows.map(toNote) })
     }
@@ -134,6 +155,8 @@ export default async function handler(request: VercelRequest, response: VercelRe
       const body = typeof payload.body === 'string' ? payload.body.trim() : ''
       const image = typeof payload.image === 'string' && payload.image.length > 0 ? payload.image : null
       const imageThumbnail = typeof payload.imageThumbnail === 'string' && payload.imageThumbnail.length > 0 ? payload.imageThumbnail : null
+      const imageKey = typeof payload.imageKey === 'string' && payload.imageKey.length > 0 ? payload.imageKey : null
+      const imageThumbnailKey = typeof payload.imageThumbnailKey === 'string' && payload.imageThumbnailKey.length > 0 ? payload.imageThumbnailKey : null
 
       if (!body) return sendError(response, 400, '正文不能为空。')
       if (title.length > 160) return sendError(response, 400, '标题不能超过 160 个字符。')
@@ -141,22 +164,23 @@ export default async function handler(request: VercelRequest, response: VercelRe
       const imageByteLength = image ? Buffer.byteLength(image, 'utf8') : 0
       const thumbnailByteLength = imageThumbnail ? Buffer.byteLength(imageThumbnail, 'utf8') : 0
 
-      if (image && (!image.startsWith('data:image/') || imageByteLength > MAX_IMAGE_DATA_BYTES)) {
+      const isStoredImage = (value: string) => value.startsWith('https://') || value.startsWith('http://')
+      if (image && (!image.startsWith('data:image/') && !isStoredImage(image) || image.startsWith('data:image/') && imageByteLength > MAX_IMAGE_DATA_BYTES)) {
         return sendError(response, 400, '图片格式不支持，或图片大小超过限制。')
       }
-      if (imageThumbnail && (!imageThumbnail.startsWith('data:image/') || thumbnailByteLength > MAX_IMAGE_DATA_BYTES)) {
+      if (imageThumbnail && (!imageThumbnail.startsWith('data:image/') && !isStoredImage(imageThumbnail) || imageThumbnail.startsWith('data:image/') && thumbnailByteLength > MAX_IMAGE_DATA_BYTES)) {
         return sendError(response, 400, '图片缩略图格式不支持，或大小超过限制。')
       }
-      if (imageByteLength + thumbnailByteLength > MAX_TOTAL_IMAGE_DATA_BYTES) {
+      if (image?.startsWith('data:image/') && imageThumbnail?.startsWith('data:image/') && imageByteLength + thumbnailByteLength > MAX_TOTAL_IMAGE_DATA_BYTES) {
         return sendError(response, 400, '压缩后的图片仍然过大，请裁剪或降低照片分辨率后再上传。')
       }
 
       const [result] = await pool.execute<mysql.ResultSetHeader>(
-        'INSERT INTO photo_notes (title, body, image, image_thumbnail) VALUES (?, ?, ?, ?)',
-        [title || '没有标题的一页', body, image, imageThumbnail],
+        'INSERT INTO photo_notes (title, body, image, image_thumbnail, image_key, image_thumbnail_key) VALUES (?, ?, ?, ?, ?, ?)',
+        [title || '没有标题的一页', body, image, imageThumbnail, imageKey, imageThumbnailKey],
       )
       const [rows] = await pool.query<NoteRow[]>(
-        'SELECT id, title, body, image, image_thumbnail, created_at FROM photo_notes WHERE id = ?',
+        'SELECT id, title, body, image, image_thumbnail, image_key, image_thumbnail_key, created_at FROM photo_notes WHERE id = ?',
         [result.insertId],
       )
       return response.status(201).json({ note: toNote(rows[0]) })
@@ -164,6 +188,12 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
     const id = Number(request.query.id)
     if (!Number.isInteger(id) || id <= 0) return sendError(response, 400, '笔记编号无效。')
+    const [rows] = await pool.query<NoteRow[]>('SELECT image_key, image_thumbnail_key FROM photo_notes WHERE id = ?', [id])
+    if (rows[0]) {
+      const oss = getOssClient()
+      const keys = [rows[0].image_key, rows[0].image_thumbnail_key].filter((key): key is string => Boolean(key))
+      if (oss && keys.length > 0) await Promise.all(keys.map((key) => oss.delete(key)))
+    }
     const [result] = await pool.execute<mysql.ResultSetHeader>('DELETE FROM photo_notes WHERE id = ?', [id])
     if (result.affectedRows === 0) return sendError(response, 404, '笔记不存在。')
     return response.status(204).end()

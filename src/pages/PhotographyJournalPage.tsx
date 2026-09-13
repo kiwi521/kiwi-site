@@ -1,6 +1,6 @@
 import { ImagePlus } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { createNote, deleteNote, fetchNotes } from '../api/notes'
+import { createNote, deleteNote, fetchNotes, uploadImages } from '../api/notes'
 import { HeroSection } from '../components/HeroSection'
 import { NotePublisher } from '../components/NotePublisher'
 import { PhotoMasonry } from '../components/PhotoMasonry'
@@ -34,7 +34,16 @@ export function PhotographyJournalPage() {
   const handleCreateNote = async (draft: NoteDraft) => {
     setSubmitting(true)
     try {
-      const note = await createNote(draft, adminToken.trim())
+      const uploaded = draft.image
+        ? await uploadImages(draft.image, draft.imageThumbnail, adminToken.trim())
+        : null
+      const note = await createNote({
+        ...draft,
+        image: uploaded?.image || null,
+        imageThumbnail: uploaded?.imageThumbnail || null,
+        imageKey: uploaded?.imageKey,
+        imageThumbnailKey: uploaded?.imageThumbnailKey,
+      }, adminToken.trim())
       setNotes((currentNotes) => [note, ...currentNotes])
       setNotesError('')
       window.sessionStorage.setItem('kiwi-notes-token', adminToken.trim())

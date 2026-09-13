@@ -1,4 +1,4 @@
-import type { JournalNote, NoteDraft } from '../types/note'
+import type { JournalNote, NoteDraft, UploadedImages } from '../types/note'
 
 type NotesResponse = {
   notes?: JournalNote[]
@@ -38,6 +38,19 @@ export async function createNote(note: NoteDraft, adminToken: string) {
   const payload = (await response.json()) as NoteResponse
   if (!payload.note) throw new Error('发布失败，请稍后再试。')
   return payload.note
+}
+
+export async function uploadImages(image: string, imageThumbnail: string | null, adminToken: string) {
+  const response = await fetch('/api/upload', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Notes-Token': adminToken,
+    },
+    body: JSON.stringify({ image, imageThumbnail }),
+  })
+  if (!response.ok) throw new Error(await getResponseError(response))
+  return (await response.json()) as UploadedImages
 }
 
 export async function deleteNote(id: number, adminToken: string) {

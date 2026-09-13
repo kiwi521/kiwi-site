@@ -47,11 +47,12 @@ The homepage now draws from a prompt-led hero concept while adapting all core co
 
 ## Notes Backend
 
-摄影笔记通过 `api/notes.ts` 读写 MySQL，不再依赖浏览器 localStorage。接口支持：
+摄影笔记通过 `api/notes.ts` 读写 MySQL，不再依赖浏览器 localStorage；图片通过 `api/upload.ts` 上传到阿里云 OSS。接口支持：
 
 - `GET /api/notes`：读取最近 50 条笔记
 - `POST /api/notes`：创建笔记，支持标题、正文和一张图片
 - `DELETE /api/notes?id=1`：删除笔记
+- `POST /api/upload`：将压缩后的图片上传到阿里云 OSS
 
 先在 MySQL 中执行 [`database/schema.sql`](database/schema.sql) 创建数据表。然后在 Vercel 项目设置中配置以下环境变量：
 
@@ -63,6 +64,11 @@ MYSQL_PASSWORD=你的数据库密码
 MYSQL_DATABASE=你的数据库名
 MYSQL_SSL=true
 NOTES_ADMIN_TOKEN=发布和删除笔记的管理员密码
+OSS_REGION=oss-cn-hangzhou
+OSS_ACCESS_KEY_ID=阿里云 RAM 用户 AccessKey
+OSS_ACCESS_KEY_SECRET=阿里云 RAM 用户 AccessKeySecret
+OSS_BUCKET=OSS Bucket 名称
+OSS_PUBLIC_BASE_URL=Bucket 的公开访问域名
 ```
 
 也可以使用单条连接串：
@@ -73,7 +79,7 @@ MYSQL_URL=mysql://用户名:密码@主机:3306/数据库名
 
 还需要设置 `NOTES_ADMIN_TOKEN`。页面发布区输入同样的密码后，才能发布或删除笔记；访客只能读取公开笔记。
 
-`MYSQL_URL` 优先级高于分开的连接参数。上传原文件最大 5MB，支持 JPG、PNG、WebP、HEIC 和 HEIF；HEIC/HEIF 会在浏览器端转换为 JPEG，并生成展示图与缩略图。摄影笔记列表使用缩略图懒加载，点击照片可查看高清展示图。图片目前以压缩后的 Base64 写入 MySQL；如果笔记量或图片量增长，建议把图片迁移到对象存储，只在 MySQL 保存图片地址。
+`MYSQL_URL` 优先级高于分开的连接参数。上传原文件最大 5MB，支持 JPG、PNG、WebP、HEIC 和 HEIF；HEIC/HEIF 会在浏览器端转换为 JPEG，并生成展示图与缩略图。摄影笔记列表使用缩略图懒加载，点击照片可查看高清展示图。图片上传到阿里云 OSS，MySQL 只保存图片 URL 和对象 Key。
 
 如果数据库表是在图片缩略图功能加入前创建的，请继续执行 [`database/migration-add-image-thumbnail.sql`](database/migration-add-image-thumbnail.sql)，为 `photo_notes` 增加 `image_thumbnail` 字段。
 
